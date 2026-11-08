@@ -27,6 +27,18 @@ class Settings(BaseSettings):
     # Database
     DATABASE_URL: str = "sqlite+aiosqlite:///./kon_action_bridge.db"
 
+    @field_validator("DATABASE_URL", mode="before")
+    @classmethod
+    def normalize_database_url(cls, value: str) -> str:
+        if value:
+            if value.startswith("postgres://"):
+                value = value.replace("postgres://", "postgresql+asyncpg://", 1)
+            elif value.startswith("postgresql://") and not value.startswith("postgresql+asyncpg://"):
+                value = value.replace("postgresql://", "postgresql+asyncpg://", 1)
+            if "sslmode=require" in value:
+                value = value.replace("sslmode=require", "ssl=require")
+        return value
+
     # CORS Origins (comma-separated or list)
     ALLOWED_ORIGINS: Union[str, List[str]] = [
         "http://localhost:3000",
