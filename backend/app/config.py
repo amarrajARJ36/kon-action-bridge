@@ -1,0 +1,53 @@
+from typing import List, Union
+from pydantic import field_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    """
+    Application configuration loaded from environment variables and .env file.
+    """
+    SECRET_KEY: str = "your-secret-key-change-in-production-min-32-chars"
+    ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
+    ENVIRONMENT: str = "development"
+    DEBUG: bool = True
+    ALLOW_DEMO_AUTH_BYPASS: bool = False
+
+    # LLM Settings
+    LLM_PROVIDER: str = "gemini"
+    GEMINI_API_KEY: str = ""
+    GEMINI_MODEL: str = "gemini-3.5-flash-lite"
+
+    # OpenTelemetry & Distributed Tracing
+    OTEL_EXPORTER_OTLP_ENDPOINT: str = "http://localhost:4318"
+    OTEL_SERVICE_NAME: str = "kon-action-bridge"
+    JAEGER_UI_URL: str = "http://localhost:16686"
+
+    # Database
+    DATABASE_URL: str = "sqlite+aiosqlite:///./kon_action_bridge.db"
+
+    # CORS Origins (comma-separated or list)
+    ALLOWED_ORIGINS: Union[str, List[str]] = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000"
+    ]
+
+    @field_validator("ALLOWED_ORIGINS", mode="before")
+    @classmethod
+    def parse_allowed_origins(cls, value: Union[str, List[str]]) -> List[str]:
+        if isinstance(value, str):
+            origins = [origin.strip() for origin in value.split(",") if origin.strip()]
+            return origins
+        elif isinstance(value, list):
+            return [str(origin).strip() for origin in value if str(origin).strip()]
+        return ["*"]
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore"
+    )
+
+
+settings = Settings()
