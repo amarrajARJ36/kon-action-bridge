@@ -24,6 +24,16 @@ class Settings(BaseSettings):
     OTEL_SERVICE_NAME: str = "kon-action-bridge"
     JAEGER_UI_URL: str = "http://localhost:16686"
 
+    # Neon Cloud Services
+    NEON_BRANCH: str = "production"
+    NEON_BRANCH_ID: str = ""
+    NEON_FUNCTION_HOST_SUFFIX: str = ""
+    NEON_FUNCTION_URL: str = "https://br-patient-union-bdtf9eqy-hello.compute.c-8.us-east-2.aws.neon.tech/"
+    NEON_REALTIME_URL: str = ""
+    NEON_REALTIME_SECRET: str = ""
+    NEON_AI_GATEWAY_TOKEN: str = ""
+    NEON_AI_GATEWAY_BASE_URL: str = ""
+
     # Database
     DATABASE_URL: str = "sqlite+aiosqlite:///./kon_action_bridge.db"
 
@@ -37,6 +47,10 @@ class Settings(BaseSettings):
                 value = value.replace("postgresql://", "postgresql+asyncpg://", 1)
             if "sslmode=require" in value:
                 value = value.replace("sslmode=require", "ssl=require")
+            import re
+            value = re.sub(r'[?&]channel_binding=[^&]+', '', value)
+            if "?" not in value and "&" in value:
+                value = value.replace("&", "?", 1)
         return value
 
     # CORS Origins (comma-separated or list)
@@ -56,7 +70,7 @@ class Settings(BaseSettings):
         return ["*"]
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=[".env", ".env.local", "../.env.local"],
         env_file_encoding="utf-8",
         extra="ignore"
     )

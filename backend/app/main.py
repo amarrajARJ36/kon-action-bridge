@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agents.registry import agent_registry_service
 from app.api.admin import router as admin_router
@@ -9,7 +10,7 @@ from app.api.cart import router as cart_router
 from app.api.chat import router as chat_router
 from app.api.products import router as products_router
 from app.config import settings
-from app.database import AsyncSessionLocal, create_tables
+from app.database import AsyncSessionLocal, create_tables, get_db
 from app.governance.permissions import AgentPermissions
 from app.tools.registry import tool_registry_service
 
@@ -72,4 +73,77 @@ async def health_check():
         "service": "kon-action-bridge",
         "environment": settings.ENVIRONMENT,
         "debug": settings.DEBUG,
+    }
+
+
+@app.get("/neon/status", tags=["Neon Cloud Services"])
+async def neon_status(db: AsyncSession = Depends(get_db)):
+    """
+    Status probe for wired Neon Lakebase services:
+    Postgres, Functions, AI Gateway, and Realtime.
+    """
+    from sqlalchemy import text
+    import httpx
+
+    services = {}
+
+    # 1. Postgres
+    try:
+        res = await db.execute(text("SELECT version(), current_database(), (SELECT count(*) FROM products) as products_count;"))
+        row = res.mappings().first()
+        services["postgres"] = {
+            "status": "connected",
+            "driver": "SQLAlchemy + asyncpg",
+            "database": row["current_database"],
+            "version": row["version"],
+            "products_count": row["products_count"],
+        }
+    except Exception as e:
+        services["postgres"] = {"status": "error", "error": str(e)}
+
+    # 2. Neon Functions
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            fn_res = await client.get(settings.NEON_FUNCTION_URL)
+            services["functions"] = {
+                "status": "connected" if fn_res.status_code == 200 else "error",
+                "status_code": fn_res.status_code,
+                "url": settings.NEON_FUNCTION_URL,
+                "output": fn_res.text.strip(),
+            }
+    except Exception as e:
+        services["functions"] = {"status": "error", "error": str(e)}
+
+    # 3. AI Gateway
+    if settings.NEON_AI_GATEWAY_BASE_URL and settings.NEON_AI_GATEWAY_TOKEN:
+        try:
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                gw_res = await client.get(
+                    f"{settings.NEON_AI_GATEWAY_BASE_URL}/v1/models",
+                    headers={"Authorization": f"Bearer {settings.NEON_AI_GATEWAY_TOKEN}"}
+                )
+                gw_data = gw_res.json()
+                services["ai_gateway"] = {
+                    "status": "connected" if gw_res.status_code == 200 else "error",
+                    "status_code": gw_res.status_code,
+                    "catalog_count": len(gw_data.get("data", [])),
+                    "availability": gw_data.get("request_context_availability", {}).get("http", {}).get("status", "active"),
+                }
+        except Exception as e:
+            services["ai_gateway"] = {"status": "error", "error": str(e)}
+    else:
+        services["ai_gateway"] = {"status": "not_configured"}
+
+    # 4. Realtime
+    services["realtime"] = {
+        "status": "configured" if settings.NEON_REALTIME_URL else "not_configured",
+        "url": settings.NEON_REALTIME_URL,
+        "branch": settings.NEON_BRANCH,
+        "branch_id": settings.NEON_BRANCH_ID,
+    }
+
+    return {
+        "status": "operational",
+        "neon_branch": settings.NEON_BRANCH,
+        "services": services
     }
