@@ -368,6 +368,11 @@ export async function getTraceJourney(traceId: string): Promise<TraceJourneyResp
   return res.data;
 }
 
+export async function syncJaegerTraces(): Promise<{ status: string; traces_synced: number; service: string }> {
+  const res = await api.post("/admin/traces/sync-jaeger");
+  return res.data;
+}
+
 /**
  * Connects to the real-time Server-Sent Events (SSE) telemetry stream.
  * Automatically receives audit logs, security events, and trace spans.

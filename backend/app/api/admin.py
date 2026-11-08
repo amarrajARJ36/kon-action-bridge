@@ -206,6 +206,19 @@ async def get_trace_journey(
     )
 
 
+@router.post("/traces/sync-jaeger")
+async def sync_traces_to_jaeger(
+    db: AsyncSession = Depends(get_db),
+    admin_user: User = Depends(get_current_admin),
+):
+    """
+    Syncs recent trace spans from the database directly into the local Jaeger collector.
+    """
+    from app.observability.tracing import sync_database_spans_to_jaeger
+    count = await sync_database_spans_to_jaeger(db)
+    return {"status": "ok", "traces_synced": count, "service": settings.OTEL_SERVICE_NAME}
+
+
 @router.get("/agents", response_model=List[AgentResponse])
 async def list_agents(
     db: AsyncSession = Depends(get_db),

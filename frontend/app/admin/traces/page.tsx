@@ -24,7 +24,7 @@ import {
   Layers,
 } from "lucide-react";
 import { TraceSummary, TraceJourneyResponse, TraceSpan } from "@/lib/types";
-import { getTraces, getTraceJourney } from "@/lib/api";
+import { getTraces, getTraceJourney, syncJaegerTraces } from "@/lib/api";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
@@ -156,7 +156,10 @@ function TraceExplorerContent() {
 
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setShowJaegerModal(true)}
+            onClick={() => {
+              syncJaegerTraces().catch(() => {});
+              setShowJaegerModal(true);
+            }}
             className="flex items-center gap-1.5 py-1.5 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 border border-kon-border transition-colors shadow-sm"
             title="OpenTelemetry Jaeger Integration"
           >
@@ -462,16 +465,23 @@ function TraceExplorerContent() {
 
             <div className="bg-slate-950/80 rounded-xl p-3.5 border border-slate-800 mb-4 text-xs font-mono text-slate-300 space-y-2">
               <div className="text-[11px] text-slate-400 font-sans flex items-center justify-between">
-                <span>Run Jaeger locally via Docker:</span>
-                <span className="text-[10px] text-kon-blue">Container port 16686</span>
+                <span>Mac Native (Running):</span>
+                <span className="text-[10px] text-emerald-400 font-semibold">Active on Port 16686</span>
               </div>
               <div className="bg-slate-900 p-2.5 rounded-lg text-emerald-400 text-[11px] select-all overflow-x-auto border border-slate-800">
+                ./start_jaeger.sh
+              </div>
+              <div className="text-[11px] text-slate-400 font-sans flex items-center justify-between pt-1">
+                <span>Or run with Docker:</span>
+                <span className="text-[10px] text-kon-blue">Container port 16686</span>
+              </div>
+              <div className="bg-slate-900 p-2.5 rounded-lg text-slate-300 text-[11px] select-all overflow-x-auto border border-slate-800">
                 docker run -d --name jaeger -p 16686:16686 -p 4318:4318 jaegertracing/all-in-one:latest
               </div>
             </div>
 
             <div className="p-3 rounded-lg bg-blue-950/30 border border-blue-800/40 text-[11px] text-blue-300 mb-5 leading-relaxed">
-              💡 <strong>Note for reviewers:</strong> If Docker is running on your system, click below to open Jaeger. If you are reviewing without Docker, the <strong>built-in Trace Explorer</strong> right behind this window displays the exact same telemetry and millisecond timings without any installation!
+              💡 <strong>Connected Service:</strong> Traces from Neon DB are synced under <strong>kon-action-bridge</strong>. Refresh your Jaeger browser tab or click below to view all trace spans.
             </div>
 
             <div className="flex items-center justify-end gap-2.5">

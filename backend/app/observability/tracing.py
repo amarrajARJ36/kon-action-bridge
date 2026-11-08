@@ -296,3 +296,44 @@ async def _export_spans_to_jaeger(trace_id: uuid.UUID, spans: List[Dict[str, Any
 def get_cached_trace(trace_id_str: str) -> Optional[List[Dict[str, Any]]]:
     """Retrieve trace spans from memory cache."""
     return _recent_traces_cache.get(trace_id_str)
+
+
+async def sync_database_spans_to_jaeger(db: AsyncSession) -> int:
+    """
+    Syncs recent database trace spans to Jaeger collector so the Jaeger UI
+    is immediately populated with services, traces, and operations.
+    """
+    from sqlalchemy import select
+    from app.models.governance import TraceSpan
+
+    try:
+        result = await db.execute(select(TraceSpan).order_by(TraceSpan.start_time.desc()).limit(300))
+        spans = result.scalars().all()
+        if not spans:
+            return 0
+
+        traces: Dict[uuid.UUID, List[Dict[str, Any]]] = {}
+        for s in spans:
+            tid = s.trace_id
+            if tid not in traces:
+                traces[tid] = []
+            traces[tid].append({
+                "span_id": s.span_id,
+                "parent_span_id": s.parent_span_id,
+                "trace_id": str(s.trace_id),
+                "name": s.name,
+                "service_name": s.service_name,
+                "start_time": s.start_time.isoformat() if s.start_time else None,
+                "end_time": s.end_time.isoformat() if s.end_time else None,
+                "duration_ms": s.duration_ms,
+                "status": s.status,
+                "attributes": s.attributes or {},
+                "events": s.events or [],
+            })
+
+        for tid, trace_spans in traces.items():
+            await _export_spans_to_jaeger(tid, trace_spans)
+
+        return len(traces)
+    except Exception:
+        return 0

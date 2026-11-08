@@ -33,6 +33,16 @@ async def lifespan(app: FastAPI):
         import logging
         logging.getLogger(__name__).warning(f"Runtime database initialization: {err}")
 
+    # 3. Pre-populate Jaeger collector with recent traces if Jaeger is active
+    try:
+        from app.database import AsyncSessionLocal
+        from app.observability.tracing import sync_database_spans_to_jaeger
+        async with AsyncSessionLocal() as session:
+            await sync_database_spans_to_jaeger(session)
+    except Exception as err:
+        import logging
+        logging.getLogger(__name__).warning(f"Jaeger span pre-population: {err}")
+
     yield
 
 
