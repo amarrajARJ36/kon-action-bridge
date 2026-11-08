@@ -14,7 +14,6 @@ import {
   Menu,
   X,
   ExternalLink,
-  FlaskConical,
   ShieldCheck,
   GitFork,
   UserCheck,
@@ -64,7 +63,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { label: "Policy Engine", href: "/admin/policies", icon: ShieldAlert },
     { label: "Activity Logs", href: "/admin/logs", icon: ScrollText },
     { label: "Security Events", href: "/admin/security", icon: AlertTriangle },
-    { label: "Quality Checks", href: "/admin/evaluations", icon: FlaskConical },
   ];
 
   return (

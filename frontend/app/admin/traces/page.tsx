@@ -153,17 +153,6 @@ function TraceExplorerContent() {
         </div>
 
         <div className="flex items-center gap-2">
-          <a
-            href="http://localhost:16686"
-            target="_blank"
-            rel="noreferrer"
-            className="flex items-center gap-1.5 py-1.5 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 border border-kon-border transition-colors"
-            title="Launch Jaeger UI container"
-          >
-            <span>Open Jaeger UI</span>
-            <ExternalLink className="w-3.5 h-3.5 text-kon-blue" />
-          </a>
-
           <button
             onClick={() => {
               fetchTracesList();
