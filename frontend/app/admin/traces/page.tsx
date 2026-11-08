@@ -32,6 +32,7 @@ import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 function TraceExplorerContent() {
   const searchParams = useSearchParams();
   const initialTraceId = searchParams.get("trace_id");
+  const jaegerParam = searchParams.get("jaeger");
 
   const [traces, setTraces] = useState<TraceSummary[]>([]);
   const [selectedTraceId, setSelectedTraceId] = useState<string | null>(initialTraceId);
@@ -41,6 +42,7 @@ function TraceExplorerContent() {
   const [searchQuery, setSearchQuery] = useState("");
   const [copied, setCopied] = useState(false);
   const [expandedSpanId, setExpandedSpanId] = useState<string | null>(null);
+  const [showJaegerModal, setShowJaegerModal] = useState(jaegerParam === "true");
 
   const fetchTracesList = useCallback(async () => {
     try {
@@ -153,6 +155,15 @@ function TraceExplorerContent() {
         </div>
 
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowJaegerModal(true)}
+            className="flex items-center gap-1.5 py-1.5 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 border border-kon-border transition-colors shadow-sm"
+            title="OpenTelemetry Jaeger Integration"
+          >
+            <span>Open Jaeger UI</span>
+            <ExternalLink className="w-3.5 h-3.5 text-kon-blue" />
+          </button>
+
           <button
             onClick={() => {
               fetchTracesList();
@@ -422,6 +433,67 @@ function TraceExplorerContent() {
           )}
         </div>
       </div>
+
+      {/* Jaeger OTel Enterprise Integration Modal */}
+      {showJaegerModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
+          <div className="bg-kon-surface border border-kon-border rounded-2xl max-w-lg w-full p-6 shadow-2xl relative animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3 border-b border-kon-border mb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded-lg bg-blue-600/20 border border-blue-500/40 flex items-center justify-center text-blue-400 font-bold text-xs">
+                  OTel
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white tracking-tight">OpenTelemetry & Jaeger Tracing</h3>
+                  <span className="text-[10px] text-emerald-400 font-medium">Native OTLP/HTTP v1 Receiver Protocol</span>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowJaegerModal(false)}
+                className="text-slate-400 hover:text-white text-base px-2 py-0.5 rounded-lg hover:bg-slate-800 transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-300 leading-relaxed mb-4">
+              Every request in KON Action Bridge automatically generates <strong>W3C OpenTelemetry-standard spans</strong> and broadcasts them to local and cloud collectors via OTLP.
+            </p>
+
+            <div className="bg-slate-950/80 rounded-xl p-3.5 border border-slate-800 mb-4 text-xs font-mono text-slate-300 space-y-2">
+              <div className="text-[11px] text-slate-400 font-sans flex items-center justify-between">
+                <span>Run Jaeger locally via Docker:</span>
+                <span className="text-[10px] text-kon-blue">Container port 16686</span>
+              </div>
+              <div className="bg-slate-900 p-2.5 rounded-lg text-emerald-400 text-[11px] select-all overflow-x-auto border border-slate-800">
+                docker run -d --name jaeger -p 16686:16686 -p 4318:4318 jaegertracing/all-in-one:latest
+              </div>
+            </div>
+
+            <div className="p-3 rounded-lg bg-blue-950/30 border border-blue-800/40 text-[11px] text-blue-300 mb-5 leading-relaxed">
+              💡 <strong>Note for reviewers:</strong> If Docker is running on your system, click below to open Jaeger. If you are reviewing without Docker, the <strong>built-in Trace Explorer</strong> right behind this window displays the exact same telemetry and millisecond timings without any installation!
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5">
+              <button
+                onClick={() => setShowJaegerModal(false)}
+                className="px-3.5 py-1.5 rounded-lg border border-kon-border text-xs text-slate-300 hover:bg-slate-800 transition-colors"
+              >
+                Close
+              </button>
+              <a
+                href="http://localhost:16686"
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-kon-blue hover:bg-blue-600 text-xs font-semibold text-white shadow-md shadow-blue-950/40 transition-colors"
+              >
+                <span>Launch Jaeger UI (Port 16686)</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

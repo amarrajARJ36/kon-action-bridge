@@ -215,9 +215,17 @@ export default function AdminOverviewPage() {
           <div className="flex gap-2">
             <Link
               href="/admin/traces"
-              className="w-full py-1.5 px-3 bg-kon-surface hover:bg-kon-blue text-white text-xs font-semibold rounded-lg border border-kon-border transition-colors text-center"
+              className="flex-1 py-1.5 px-2 bg-kon-surface hover:bg-kon-blue text-white text-xs font-semibold rounded-lg border border-kon-border transition-colors text-center"
             >
-              Open Trace Explorer
+              Trace Explorer
+            </Link>
+            <Link
+              href="/admin/traces?jaeger=true"
+              className="py-1.5 px-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-medium rounded-lg border border-kon-border transition-colors flex items-center gap-1"
+              title="OpenTelemetry Jaeger Integration"
+            >
+              <span>Jaeger</span>
+              <ExternalLink className="w-3 h-3 text-kon-blue" />
             </Link>
           </div>
         </Card>
