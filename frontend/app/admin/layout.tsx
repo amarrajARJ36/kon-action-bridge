@@ -41,6 +41,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       if (!token || role !== "admin") {
         login("admin", "admin123")
           .then((res) => {
+            localStorage.setItem("kon_admin_token", res.access_token);
             localStorage.setItem("kon_token", res.access_token);
             localStorage.setItem("kon_user", JSON.stringify(res.user));
             setAdminUsername(res.user.username);

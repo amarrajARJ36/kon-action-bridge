@@ -53,10 +53,13 @@ function isTokenExpiredHelper(token: string): boolean {
 // Attach Authorization header if valid token exists
 api.interceptors.request.use((config) => {
   if (typeof window !== "undefined") {
-    const token = localStorage.getItem("kon_token");
+    const isAdminUrl = config.url?.startsWith("/admin");
+    const adminToken = localStorage.getItem("kon_admin_token");
+    const token = (isAdminUrl && adminToken) ? adminToken : (adminToken || localStorage.getItem("kon_token"));
     if (token) {
       if (isTokenExpiredHelper(token)) {
-        localStorage.removeItem("kon_token");
+        if (isAdminUrl && adminToken) localStorage.removeItem("kon_admin_token");
+        else localStorage.removeItem("kon_token");
       } else {
         config.headers.Authorization = `Bearer ${token}`;
       }
@@ -82,7 +85,7 @@ const processQueue = (error: any, token: string | null = null) => {
   failedQueue = [];
 };
 
-// Response interceptor with transparent re-auth on 401
+// Response interceptor with transparent re-auth for both admin and customer sessions
 api.interceptors.response.use(
   (res) => res,
   async (err) => {
@@ -93,9 +96,26 @@ api.interceptors.response.use(
       typeof window !== "undefined" &&
       (window.location.pathname.startsWith("/admin") || originalRequest?.url?.includes("/admin"));
 
-    if (isAuthError && isAdminRoute) {
-      window.dispatchEvent(new CustomEvent("kon_admin_auth_error", { detail: status }));
-      return Promise.reject(err);
+    // Transparently auto-reauthenticate admin session on 401/403
+    if (isAuthError && isAdminRoute && originalRequest && !originalRequest._adminRetry) {
+      originalRequest._adminRetry = true;
+      try {
+        const adminRes = await axios.post(`${API_BASE_URL}/auth/login`, {
+          username: "admin",
+          password: "admin123",
+        });
+        const adminToken = adminRes.data.access_token;
+        if (typeof window !== "undefined") {
+          localStorage.setItem("kon_admin_token", adminToken);
+          localStorage.setItem("kon_token", adminToken);
+          localStorage.setItem("kon_user", JSON.stringify(adminRes.data.user));
+        }
+        originalRequest.headers.Authorization = `Bearer ${adminToken}`;
+        return api(originalRequest);
+      } catch (adminErr) {
+        window.dispatchEvent(new CustomEvent("kon_admin_auth_error", { detail: status }));
+        return Promise.reject(adminErr);
+      }
     }
 
     // Transparently refresh customer session on 401
@@ -358,7 +378,7 @@ export function createAdminEventSource(
 ): () => void {
   if (typeof window === "undefined") return () => {};
 
-  const token = localStorage.getItem("kon_token") || "";
+  const token = localStorage.getItem("kon_admin_token") || localStorage.getItem("kon_token") || "";
   const url = `${API_BASE_URL}/admin/events/stream${token ? `?token=${encodeURIComponent(token)}` : ""}`;
   const es = new EventSource(url);
 

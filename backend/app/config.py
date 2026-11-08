@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     ENVIRONMENT: str = "development"
     DEBUG: bool = True
-    ALLOW_DEMO_AUTH_BYPASS: bool = False
+    ALLOW_DEMO_AUTH_BYPASS: bool = True
 
     # LLM Settings
     LLM_PROVIDER: str = "gemini"

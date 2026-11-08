@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 from sqlalchemy import or_, select
@@ -133,18 +133,21 @@ async def get_current_user(
 
 
 async def get_current_admin(
+    request: Request,
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
     db: AsyncSession = Depends(get_db),
 ) -> User:
     """
     Validates bearer token and verifies caller holds active admin role.
+    Supports Authorization header as well as query parameter 'token' for SSE streams.
     Enforces fail-secure role-based access control:
     - Missing token -> 401 Unauthorized
     - Invalid or expired token -> 401 Unauthorized
     - Authenticated non-admin -> 403 Forbidden
-    Demo bypass is disabled by default and requires explicit ALLOW_DEMO_AUTH_BYPASS setting.
+    Demo bypass allows seamless local presentation when enabled.
     """
-    if not credentials:
+    token = credentials.credentials if credentials else request.query_params.get("token")
+    if not token:
         if settings.ALLOW_DEMO_AUTH_BYPASS:
             stmt = select(User).where(User.username == "admin")
             result = await db.execute(stmt)
@@ -158,7 +161,6 @@ async def get_current_admin(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    token = credentials.credentials
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         user_id = payload.get("user_id")

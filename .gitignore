@@ -48,6 +48,9 @@ Thumbs.db
 *.log
 npm-debug.log*
 yarn-debug.log*
+
+# Jaeger local binary
+.jaeger/
 yarn-error.log*
 
 .neon
