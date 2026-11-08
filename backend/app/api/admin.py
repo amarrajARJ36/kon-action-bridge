@@ -374,7 +374,7 @@ async def approve_request(
 ):
     """
     Supervisor approves a pending high-risk AI agent action (e.g. submit_order).
-    Records approval in immutable audit logs.
+    Records approval in tamper-evident audit logs.
     """
     stmt = select(ApprovalRequest).where(ApprovalRequest.id == approval_id)
     res = await db.execute(stmt)
@@ -398,7 +398,7 @@ async def approve_request(
     await db.commit()
     await db.refresh(req)
 
-    # Log supervisor authorization into immutable audit log
+    # Log supervisor authorization into tamper-evident audit log
     await audit_logger.log(
         db=db,
         agent_id=req.agent_id,
@@ -459,7 +459,7 @@ async def reject_request(
     await db.commit()
     await db.refresh(req)
 
-    # Log supervisor rejection into immutable audit log
+    # Log supervisor rejection into tamper-evident audit log
     await audit_logger.log(
         db=db,
         agent_id=req.agent_id,
@@ -564,7 +564,7 @@ async def list_audit_logs(
     admin_user: User = Depends(get_current_admin),
 ):
     """
-    Query immutable audit logs with flexible filtering.
+    Query tamper-evident audit logs with flexible filtering.
     Returns {logs: [...], total: int} to support pagination in the dashboard.
     """
     from sqlalchemy import func

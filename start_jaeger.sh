@@ -31,3 +31,4 @@ fi
 # Open browser automatically after 1 second
 (sleep 1 && open http://localhost:16686 2>/dev/null || true) &
 exec "$BIN"
+

@@ -2,9 +2,9 @@
 
 > **Enterprise AI Commerce Action Bridge — Governed Autonomous Agents & Observability Gateway**
 
-A production-grade architectural MVP demonstrating how a conversational AI shopping agent (powered by Google Gemini native function calling) interacts with enterprise commerce APIs under a **strict, fail-closed governance gateway**.
+An **enterprise-oriented engineering prototype** demonstrating how a conversational AI shopping agent (powered by Google Gemini native function calling) interacts with enterprise commerce APIs under a **strict, fail-closed governance gateway**.
 
-Every autonomous tool proposal by the AI must pass schema validation, identity/session ownership verification, permission matrices, and human-in-the-loop authorization before execution. Complete lifecycle observability is captured with OpenTelemetry distributed tracing and cryptographically verifiable audit logs.
+Every autonomous tool proposal by the AI must pass schema validation, identity and session ownership verification, dynamic permission matrices, and human-in-the-loop authorization prior to execution. Complete lifecycle observability is captured with OpenTelemetry distributed tracing and SHA-256 hash-chained, tamper-evident audit logging.
 
 ---
 
@@ -52,8 +52,8 @@ Every autonomous tool proposal by the AI must pass schema validation, identity/s
                                          │                                         │
                                          ▼                                         │
                        ┌──────────────────────────────────┐                        │
-                       │   Cryptographic Audit Logger &   │                        │
-                       │   OpenTelemetry Trace Pipeline   │                        │
+                       │   SHA-256 Tamper-Evident Logger  │                        │
+                       │   & OpenTelemetry Trace Pipeline │                        │
                        └─────────────────┬────────────────┘                        │
                                          │                                         │
                                          └─────────────────────────────────────────┘
@@ -61,12 +61,13 @@ Every autonomous tool proposal by the AI must pass schema validation, identity/s
 ```
 
 ### Key Architectural Tenets
-1. **Gemini Native Tool Selection**: Gemini understands unstructured natural language and proposes structured tool calls using the modern `google-genai` SDK.
+1. **Gemini Native Tool Selection**: Gemini parses unstructured natural language and proposes structured tool calls using the official `google-genai` SDK.
 2. **Manual Controlled Execution**: `automatic_function_calling` is explicitly **disabled**. The model cannot execute Python functions or touch databases autonomously.
 3. **Fail-Closed Governance Gateway**: If a tool, agent status, schema, session ownership, or business boundary fails verification, the action is denied immediately and logged.
 4. **Human-in-the-Loop (HITL) Queue**: High-risk actions like `submit_order` trigger a `REQUIRES_APPROVAL` state, queuing in the supervisor console via real-time Server-Sent Events (SSE).
-5. **Deterministic Fallback Engine**: If Gemini credentials are not supplied or an upstream network error occurs, the system smoothly falls back to an internal deterministic state-machine agent with 0 downtime.
-6. **Separated Telemetry & Precision Latency**: Distinguishes unique agent requests, actual tool invocations, affected items, and policy outcomes, with millisecond-accurate phase profiling (`time.perf_counter()`).
+5. **Tamper-Evident Audit Logging**: Implements SHA-256 cryptographic hash chaining (`prev_hash` $\to$ `entry_hash`). Any retroactive row alteration, insertion, or deletion breaks chain integrity and is flagged via the verification endpoint.
+6. **Deterministic Fallback Engine**: If Gemini credentials are not supplied or an upstream network error occurs, the system smoothly falls back to an internal deterministic state-machine agent with 0 downtime.
+7. **Separated Telemetry & Precision Latency**: Distinguishes unique agent requests, actual tool invocations, affected items, and policy outcomes, with millisecond-accurate phase profiling (`time.perf_counter()`).
 
 ---
 
@@ -74,11 +75,11 @@ Every autonomous tool proposal by the AI must pass schema validation, identity/s
 
 ```
 Kon/
-├── backend/                         # FastAPI Python backend
+├── backend/                         # FastAPI Python 3.13 backend
 │   ├── app/
 │   │   ├── main.py                  # App entrypoint + DB lifespan seeder
 │   │   ├── config.py                # Config settings (.env loader)
-│   │   ├── database.py              # Async SQLAlchemy + aiosqlite / Postgres
+│   │   ├── database.py              # Async SQLAlchemy + Neon PostgreSQL / SQLite
 │   │   ├── models/                  # Governance, user, cart, product models
 │   │   ├── schemas/                 # Strict Pydantic v2 schemas
 │   │   ├── api/                     # Endpoints (auth, chat, cart, admin)
@@ -88,7 +89,7 @@ Kon/
 │   │   ├── observability/           # AuditLogger, metrics, tracing, evaluator
 │   │   └── commerce/                # Catalog + basket services + adapters
 │   ├── tests/                       # 21 automated pytest scenarios
-│   ├── seed.py                      # Database seeder (catalog, 4 AI employees)
+│   ├── seed.py                      # Database seeder (catalog, AI employees)
 │   ├── requirements.txt
 │   ├── .dockerignore
 │   └── Dockerfile
@@ -104,11 +105,11 @@ Kon/
 │   │       ├── agents/              # Enterprise AI Employee Directory
 │   │       ├── tools/               # Tool Registry & JSON Schema definitions
 │   │       ├── policies/            # Live Policy Matrix & principles
-│   │       ├── logs/                # Cryptographic Activity & Audit Log
-│   │       ├── security/            # Security Denials & Blocked Actions
-│   │       └── evaluations/         # Conversation Quality Checks
+│   │       ├── logs/                # Tamper-Evident Activity & Audit Log
+│   │       └── security/            # Security Denials & Blocked Actions
 │   ├── lib/                         # Axios client with auto-refresh + types
 │   └── Dockerfile
+├── start_jaeger.sh                  # 1-click standalone Jaeger launcher for macOS
 ├── docker-compose.yml               # Multi-container orchestration (Backend + Frontend + Jaeger)
 ├── .env.example
 └── README.md
@@ -127,10 +128,10 @@ cd backend
 python3 -m venv venv
 source venv/bin/activate
 
-# Install dependencies (including modern google-genai SDK)
+# Install dependencies
 pip install -r requirements.txt
 
-# Seed the database (creates 17 catalog products, default users, 4 AI employees)
+# Seed the database (creates catalog products, roles, AI employees)
 python seed.py
 
 # Start backend server
@@ -169,12 +170,15 @@ Services exposed:
 
 ---
 
-## 🔑 Demo Credentials
+## 🔑 Authentication & Evaluation Accounts
 
-| Role | Username | Password | Purpose |
-|------|----------|----------|---------|
-| **Enterprise Admin** | `admin` | `admin123` | Full access to Governance Console & Approvals |
-| **Retail Customer** | `demo_customer` | `customer123` | Conversational Shopping Experience |
+| Role | Test Username | Credential Management | Scope & Capabilities |
+| :--- | :--- | :--- | :--- |
+| **Retail Customer** | `demo_customer` | Auto-initialized for demo / `customer123` | Conversational grocery shopping, basket management, voice interface |
+| **Enterprise Supervisor** | `admin` | Set securely via `.env` / Admin Setup | Governance Console, HITL Approvals, Agent & Tool Management, Trace Explorer |
+
+> [!IMPORTANT]
+> **Administrative Credential Security**: In adherence to secure engineering standards, administrative passwords are not published in public documentation. For evaluation and development environments, administrative credentials are initialized from local environment configurations (`.env`) or securely seeded via `backend/seed.py`.
 
 ---
 
@@ -184,7 +188,7 @@ The system models AI agents as recognized enterprise employees with defined depa
 
 | Agent ID | Employee Name | Department | Model & Provider | Permitted Tools |
 | :--- | :--- | :--- | :--- | :--- |
-| `kon-shopping-agent` | KON Retail Commerce Assistant | Retail Commerce | Google Gemini (`gemini-3.5-flash-lite`) | `search_products`, `get_product_details`, `add_to_cart`, `update_cart_item`, `remove_from_cart`, `get_cart`, `get_checkout_preview`, `submit_order` |
+| `kon-shopping-agent` | KON Retail Commerce Assistant | Retail Commerce | Google Gemini (`gemini-2.5-flash-lite`) | `search_products`, `get_product_details`, `add_to_cart`, `update_cart_item`, `remove_from_cart`, `get_cart`, `get_checkout_preview`, `submit_order` |
 | `kon-support-agent` | KON Customer Care Agent | Customer Care | Anthropic Claude (`claude-3-5-sonnet`) | `search_faq`, `track_delivery`, `open_ticket` |
 | `kon-finance-agent` | KON Invoicing & Settlement Agent | Finance & Accounting | OpenAI (`gpt-4o`) | `query_ledger`, `generate_invoice` |
 | `kon-hr-agent` | KON Employee Operations Agent | Human Resources | OpenAI (`gpt-4o-mini`) | `search_hr_policy`, `request_leave` |
@@ -210,8 +214,38 @@ Administrators can toggle employee status (1-click active/inactive) and update t
 * A pending `ApprovalRequest` record is written to the database with itemized cart details and risk rating.
 * Real-time SSE alert `approval_request` appears on `/admin/approvals`.
 * An administrator reviews and either **Approves** or **Rejects** the action with audit notes.
-* *Honest Boundary*: In this MVP, approvals record the supervisor decision for demonstration; no real financial card charge or physical courier delivery is executed.
+* *Prototype Boundary*: In this engineering prototype, approvals record the supervisor decision for demonstration; no real financial card charge or physical courier delivery is executed.
 * State transitions accept decisions **only** when requests are in `pending` status.
+
+---
+
+## 📜 Tamper-Evident Audit Logging (SHA-256 Hash Chain)
+
+Rather than claiming unconditional database immutability, KON Action Bridge implements **cryptographic SHA-256 hash chaining** to ensure verifiable **tamper-evidence**:
+
+* **Hash Formula**:
+  $$\text{entry\_hash} = \text{SHA256}(\text{prev\_hash} \,\|\, \text{event\_id} \,\|\, \text{trace\_id} \,\|\, \text{action} \,\|\, \text{decision} \,\|\, \text{status} \,\|\, \text{resource})$$
+* **Genesis Anchor**: The initial entry binds to `GENESIS_ROOT_HASH_00000000000000000000000000000000000000000000`.
+* **Tamper-Evidence**: Any retroactive row modification, dropped event, or injected record creates a hash mismatch across the chain.
+* **Integrity Endpoint**: `/admin/audit-logs-verify-chain` programmatically verifies the sequential hash chain across all records and pinpoints the exact record index if tampering occurs.
+
+---
+
+## 📊 Observability & OpenTelemetry Distributed Tracing
+
+### Distributed Trace Pipeline
+Every conversation turn creates an end-to-end W3C-standard trace with parent/child spans:
+1. `request_received` (Context validation & normalization)
+2. `ai_inference` (Gemini function-calling turn latency)
+3. `policy_evaluation` (Fail-closed authorization check)
+4. `tool_execution` (Commerce API execution latency measured accurately via `time.perf_counter()`)
+5. `audit_persistence` (Cryptographic log recording)
+6. `avatar_response` (Neural TTS speech generation)
+
+### Inspecting Traces
+* **In-App Trace Explorer**: Navigate to `/admin/traces` for visual waterfall journeys, span hierarchy, and stage latencies.
+* **External Jaeger UI**: Traces are broadcast to the local OpenTelemetry collector on port `4318`. View traces in Jaeger at **`http://localhost:16686`**.
+* **macOS 1-Click Jaeger**: On macOS (Apple Silicon `arm64`), run `./start_jaeger.sh` to download and launch the standalone binary instantly without Docker.
 
 ---
 
@@ -243,26 +277,11 @@ python -m pytest tests/test_scenarios.py -v
 | **Test 14** | Hallucination Prevention | Model claiming addition of out-of-stock item is flagged in Quality Checks. |
 | **Test 15** | Pydantic Schema Enforcement | Malformed JSON parameters rejected before executor dispatch. |
 | **Test 16** | Registry Persistence | Administrator modifications persist safely across application restarts. |
-| **Test 17** | SHA-256 Audit Immutability | Verifies cryptographic hash chain integrity of the audit log. |
+| **Test 17** | TTS Endpoint Security | Authenticates voice synthesis requests and enforces maximum character limits. |
 | **Test 18** | Request Journey Spans | Confirms root-to-leaf span timings (`request_received`, `ai_inference`, etc.). |
 | **Test 19** | Separated Telemetry Metrics | Non-skewed separated calculations for requests, tool calls, and latencies. |
 | **Test 20** | HITL Approval Workflow | High-risk `submit_order` intercepts into pending approval queue; blocks re-approval. |
 | **Test 21** | AI Employee Directory | Dynamic request/failure counters, 1-click status toggle, and permission edits. |
-
----
-
-## 📊 Observability & Telemetry
-
-### Trace Journey Timeline
-Every conversation turn creates an end-to-end trace with parent/child spans:
-1. `request_received` (Context validation & normalization)
-2. `ai_inference` (Gemini function-calling turn latency)
-3. `policy_evaluation` (Fail-closed authorization check)
-4. `tool_execution` (Commerce API execution latency measured accurately via `time.perf_counter()`)
-5. `audit_persistence` (Cryptographic log recording)
-6. `avatar_response` (Neural TTS speech generation)
-
-Inspect live traces directly in the internal **Trace Explorer** (`/admin/traces`) or in **Jaeger** (`http://localhost:16686`).
 
 ---
 

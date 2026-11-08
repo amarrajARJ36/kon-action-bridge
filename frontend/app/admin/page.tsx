@@ -286,7 +286,7 @@ export default function AdminOverviewPage() {
             </div>
 
             <div className="p-3 rounded-lg bg-kon-surface/60 border border-kon-border/50">
-              <span className="text-white font-semibold block mb-1">Immutable Audit Trail</span>
+              <span className="text-white font-semibold block mb-1">Tamper-Evident Audit Trail</span>
               Both permitted and blocked attempts are permanently persisted with SHA-256 hash chaining and OpenTelemetry spans.
             </div>
           </div>

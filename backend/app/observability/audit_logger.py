@@ -65,7 +65,7 @@ class AuditLogger:
         trace_id: Optional[uuid.UUID] = None,
     ) -> AuditLog:
         """
-        Writes an immutable audit log record to the database.
+        Writes a SHA-256 hash-chained, tamper-evident audit log record to the database.
         """
         # Ensure trace ID is established
         resolved_trace = trace_id or get_current_trace_id()

@@ -82,7 +82,7 @@ export default function ActivityLogsPage() {
       <div>
         <h2 className="text-xl font-bold text-white tracking-tight">Activity & Audit Logs</h2>
         <p className="text-xs text-kon-muted mt-0.5">
-          Immutable event log of every tool execution attempt, policy decision, parameter verification, and latency metric.
+          Tamper-evident audit log with SHA-256 cryptographic hash chaining of every tool execution attempt, policy decision, parameter verification, and latency metric.
         </p>
       </div>
 
